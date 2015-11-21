@@ -33,9 +33,9 @@ public class TeleOp extends LinearOpMode {
         DcMotor rearLeft = hardwareMap.dcMotor.get("rMotorL");
         DcMotor rearRight = hardwareMap.dcMotor.get("rMotorR");
         rearLeft.setDirection(DcMotor.Direction.REVERSE);
-        rearRight.setDirection(DcMotor.Direction.REVERSE);
+        //rearRight.setDirection(DcMotor.Direction.REVERSE);
         frontLeft.setDirection(DcMotor.Direction.REVERSE);
-        frontRight.setDirection(DcMotor.Direction.REVERSE);
+        //frontRight.setDirection(DcMotor.Direction.REVERSE);
         DriveSystem mecanumDriveSystem = new DriveSystem(frontLeft, frontRight, rearLeft, rearRight);
 
         dim = hardwareMap.deviceInterfaceModule.get("dim");
