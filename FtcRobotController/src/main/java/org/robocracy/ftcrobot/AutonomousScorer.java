@@ -8,8 +8,11 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
 import org.robocracy.ftcrobot.DriveSystem.AWDMecanumDS;
+import org.robocracy.ftcrobot.DriverStation.DriverCommand;
 import org.robocracy.ftcrobot.util.FileRW;
 import org.robocracy.ftcrobot.util.PIDController;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Team Robocracy
@@ -27,8 +30,13 @@ public class AutonomousScorer {
         this.robot = robot;
         this.curOpMode = curOpMode;
         this.allianceIsBlue = allianceIsBlue;
-        this.colorSensor = curOpMode.hardwareMap.colorSensor.get("color_sensor1");
-        this.ods = curOpMode.hardwareMap.opticalDistanceSensor.get("ods_sensor1");
+        try {
+            this.colorSensor = curOpMode.hardwareMap.colorSensor.get("color_sensor1");
+            this.ods = curOpMode.hardwareMap.opticalDistanceSensor.get("ods_sensor1");
+        }
+        catch(Exception e){
+            DbgLog.error(String.format("%s . Device skipped", e.getMessage()));
+        }
     }
 
     public void step1_driveToRepairZone(AWDMecanumDS drivesys) throws InterruptedException{
@@ -117,22 +125,46 @@ public class AutonomousScorer {
 
     /**
      * Drives robot during Autonomous based on values recorded in .csv file at {@code filepath}.
-     * @param filepath file path to recorded values.
      * @throws InterruptedException
      */
-    public void driveUsingReplay(String filepath) throws InterruptedException {
-        String filePath = "/sdcard/FIRST/autonomousLog/" + System.nanoTime() + ".csv";
-        robot.driveSys.setFileHandle(filePath, true);
+    public void driveUsingReplay() throws InterruptedException {
+        DriverCommand drvrCmd;
+        long replayStartTime;
+        FileRW readFileRW;
+        readFileRW = this.robot.readFileRW;
 
-        FileRW fileRW = new FileRW(filepath, false);
-        String line = fileRW.getNextLine();
+//        String filePath = "/sdcard/FIRST/autonomousLog/" + System.nanoTime() + ".csv";
+//        robot.setFileHandle(filePath, true);
+//        FileRW fileRW = new FileRW(filepath, false);
+
+        String line = readFileRW.getNextLine();
+        // Note the starting timestamp
+        replayStartTime = System.nanoTime();
         while (line != null){
             this.curOpMode.waitForNextHardwareCycle();
+            drvrCmd = robot.drvrStation.getNextCommand(line);
             DbgLog.msg(String.format("line = %s", line));
-            robot.driveSys.applyCmd(robot.drvrStation.getNextCommand(line));
-            line = fileRW.getNextLine();
+            if ((System.nanoTime() - replayStartTime) < drvrCmd.timeStamp) {
+                // Wait for a few nano seconds
+                // This will not be precise but that should be okay
+                TimeUnit.NANOSECONDS.sleep(drvrCmd.timeStamp - ((System.nanoTime() - replayStartTime)));
+            }
+            robot.driveSys.applyCmd(drvrCmd);
+            line = readFileRW.getNextLine();
         }
         robot.driveSys.stopDriveSystem();
         this.curOpMode.waitForNextHardwareCycle();
+    }
+
+    public void strafeTheDistance(AWDMecanumDS drivesys, int distanceToStrafe) throws InterruptedException {
+        int angle, speed;
+        if (distanceToStrafe < 0) {
+            angle = 180;
+        }
+        else {
+            angle = 0;
+        }
+        speed = 12;
+        drivesys.autoMecanum(angle, distanceToStrafe, speed, 0);
     }
 }

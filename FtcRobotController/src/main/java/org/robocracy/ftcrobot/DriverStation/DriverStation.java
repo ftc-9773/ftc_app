@@ -95,9 +95,9 @@ public class DriverStation {
      */
     private void getNextLinearLiftCmd(){
         float angle = -curOpMode.gamepad2.left_stick_y;
-        float direction = curOpMode.gamepad2.right_stick_y;
+        float armLength = curOpMode.gamepad2.right_stick_y;
 
-        drvrCmd.linliftcmd.direction = Range.clip(direction, -1,1);
+        drvrCmd.linliftcmd.armLength = Range.clip(armLength, -1,1);
         drvrCmd.linliftcmd.angle = Range.clip(angle, -1, 1);
     }
 
@@ -177,7 +177,7 @@ public class DriverStation {
         getNextHarvesterCmd();
         getNextLinearLiftCmd();
         getNextLatchCmd();
-        //getNextBucketCmd();
+        getNextBucketCmd();
         getNextClimberCmd();
 
         return (drvrCmd);
@@ -186,27 +186,37 @@ public class DriverStation {
     /**
      * Overrides {@link DriverStation#getNextCommand()}.
      *
-     * @see org.robocracy.ftcrobot.AutonomousScorer#driveUsingReplay(String filePath)
-     * @param line Line of comma-seperated values in csv file read in {@link org.robocracy.ftcrobot.AutonomousScorer#driveUsingReplay(String filePath)}
+     * @see org.robocracy.ftcrobot.AutonomousScorer#driveUsingReplay()
+     * @param line Line of comma-seperated values in csv file read in
+     * {@link org.robocracy.ftcrobot.AutonomousScorer#driveUsingReplay()}
      * @return {@link DriverCommand#drvsyscmd} object with values.
      */
     public DriverCommand getNextCommand(String line){
+        long timestamp = 0;
         String[] lineArray = line.split(",");
-        double angle, speedMultiplier, Omega;
-        if (lineArray.length >= 4) {
+        double angle, speedMultiplier, Omega, liftArmLengthPower, liftAnglePower;
+        if (lineArray.length >= 7) {
+            timestamp = Long.parseLong(lineArray[0]);
             angle = Double.parseDouble(lineArray[1]);
             speedMultiplier = Double.parseDouble(lineArray[2]);
             Omega = Double.parseDouble(lineArray[3]);
+            liftArmLengthPower = Double.parseDouble(lineArray[5]);
+            liftAnglePower = Double.parseDouble(lineArray[6]);
         }
         else {
             angle = 0.0;
             speedMultiplier = 0.0;
             Omega = 0.0;
+            liftArmLengthPower = 0.0;
+            liftAnglePower = 0.0;
         }
 
+        drvrCmd.timeStamp = timestamp;
         drvrCmd.drvsyscmd.angle = angle;
         drvrCmd.drvsyscmd.Omega = Omega;
         drvrCmd.drvsyscmd.speedMultiplier = speedMultiplier;
+        drvrCmd.linliftcmd.angle = (float) liftAnglePower;
+        drvrCmd.linliftcmd.armLength = (float) liftArmLengthPower;
         return (drvrCmd);
     }
 

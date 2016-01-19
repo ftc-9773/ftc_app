@@ -97,4 +97,15 @@ public class FileRW {
 
         return data;
     }
+
+    public void close() throws IOException {
+        if (this.fileWriter != null) {
+            this.fileWriter.flush(); // Write the contents in memory to the disk
+//            this.fileWriter.close();
+        }
+
+        if (this.fileReader != null) {
+            this.fileReader.close();
+        }
+    }
 }

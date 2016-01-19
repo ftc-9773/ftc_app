@@ -39,10 +39,11 @@ public class AWDMecanumDS {
     PIDController[] motorPIDController;
     LinearOpMode curOpmode;
     double robotMaxSpeed;
+    // robotLength = Distance in inches from the center of front left to the center of rear left wheel
+    // robotWidth = Distance in inches from the center of front left to the center of front right wheel
     double robotLength, robotWidth;
     FTCRobot robot;
-    FileRW fileRW;
-    NavX navx_device;
+    NavX navx_device = null;
 
     public AWDMecanumDS(LinearOpMode myOpmode, FTCRobot robot) {
         double wheelDiameter, forwardFrictionCoeff, sidewaysFrictionCoeff;
@@ -53,7 +54,9 @@ public class AWDMecanumDS {
 
         this.robot = robot;
 
-        this.navx_device = new NavX(robot, curOpmode, robot.navx_device);
+        if (robot.navxDevice != null) {
+            this.navx_device = new NavX(robot, curOpmode, robot.navxDevice);
+        }
 
         DcMotor[] motors = new DcMotor[4];
         motors[0] = myOpmode.hardwareMap.dcMotor.get("fMotorL");
@@ -108,8 +111,8 @@ public class AWDMecanumDS {
             // ToDo:  Determine the corect values for Kp, Ki, and Kd and pass them in the constructor below.
             this.motorPIDController[i] = new PIDController(0, 0, 0, 0, 0, 0);
         }
-        this.robotLength = 12; // in  inches
-        this.robotWidth = 10; // in  inches
+        this.robotLength = 10.5; // in  inches
+        this.robotWidth = 15; // in  inches
     }
 
     /**
@@ -163,7 +166,7 @@ public class AWDMecanumDS {
      * @param speed overall speed of robot
      * @param robotSpinDegrees degrees robot should spin while moving
      * @throws InterruptedException
-     * @see AWDMecanumDS#driveMecanum(int, double, double, boolean)
+     * @see AWDMecanumDS#driveMecanum(int, double, double)
      */
     public void autoMecanum(int angle, int distance, double speed, int robotSpinDegrees) throws InterruptedException {
         double[] distanceTravelledByWheel = new double[4];
@@ -330,16 +333,34 @@ public class AWDMecanumDS {
 
 
     /**
-     * Applies {@link DriverCommand#drvsyscmd} values initialized in {@link DriverStation#getNextDrivesysCmd()} to {@link AWDMecanumDS#driveMecanum(int, double, double, boolean)}
+     * Applies {@link DriverCommand#drvsyscmd} values initialized in {@link DriverStation#getNextDrivesysCmd()} to {@link AWDMecanumDS#driveMecanum(int, double, double)}
      * @param driverCommand {@link DriverCommand} object with values
      * @throws InterruptedException
      */
     public void applyCmd(DriverCommand driverCommand) throws InterruptedException {
-        this.driveMecanum((int) driverCommand.drvsyscmd.angle, driverCommand.drvsyscmd.speedMultiplier, driverCommand.drvsyscmd.Omega, true);
+        int angle;
+        double speedMultiplier, Omega, liftDirection, liftAngle;
 
-    }
-    public void setFileHandle(String filePath, boolean isWrite){
-        fileRW = new FileRW(filePath, isWrite);
+        angle = (int) driverCommand.drvsyscmd.angle;
+        speedMultiplier = driverCommand.drvsyscmd.speedMultiplier;
+        Omega = driverCommand.drvsyscmd.Omega;
+        liftDirection = driverCommand.linliftcmd.armLength;
+        liftAngle = driverCommand.linliftcmd.angle;
+
+        //Logs values into file
+        if(this.robot.writeFileRW != null) {
+            float[] navx_data;
+            if (navx_device != null) {
+                navx_data = navx_device.getNavxData();
+            } else {
+                navx_data = new float[4];
+                navx_data[0] = 0;
+            }
+            String line = (System.nanoTime() - robot.timestamp) + "," + angle + "," + speedMultiplier + "," +
+                    Omega + "," + navx_data[0] + "," + liftDirection + "," + liftAngle;
+            this.robot.writeFileRW.fileWrite(line);
+        }
+        this.driveMecanum((int) driverCommand.drvsyscmd.angle, driverCommand.drvsyscmd.speedMultiplier, driverCommand.drvsyscmd.Omega);
 
     }
 
@@ -348,12 +369,11 @@ public class AWDMecanumDS {
      * @param angle angle robot should move in relative to direction robot is facing
      * @param speedMultiplier overall speed robot should move in
      * @param Omega degrees robot should turn relative to 2 dimensional center of robot
-     * @param logValues if true, logs values into timestamped .csv file
      * @throws InterruptedException
      * @see AWDMecanumDS#autoMecanum(int, int, double, int)
      * @see  FileRW
      */
-    private void driveMecanum(int angle, double speedMultiplier, double Omega, boolean logValues) throws  InterruptedException{
+    private void driveMecanum(int angle, double speedMultiplier, double Omega) throws  InterruptedException{
         double[] speedOfWheel = new double[4];
         double[] motorPower = new double[4];
 
@@ -370,14 +390,6 @@ public class AWDMecanumDS {
 
         double speed = speedMultiplier * this.robotMaxSpeed;
         this.angleToSpeedOfWheel(angle, speed, Omega, speedOfWheel);
-        //Logs values into file
-        if(logValues == true) {
-            if((angle != 0) || (speedMultiplier != 0.0) || (Omega != 0.0)){
-                float[] navx_data = navx_device.getNavxData();
-                String line = (System.nanoTime() - robot.timestamp) + "," + angle + "," + speedMultiplier + "," + Omega + "," + navx_data[0];
-                fileRW.fileWrite(line);
-            }
-        }
 
         // Determine the Power for each Motor/PowerTrain
         for (int i=0; i<4; i++) {
