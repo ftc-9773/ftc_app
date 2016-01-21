@@ -88,7 +88,7 @@ public class AWDMecanumDS {
         //        FLgearRatio = FRgearRatio = RLgearRatio = RRgearRatio = 1.0;
         // We assume that the motor power efficiency when connected through sprocket-chain is
         // 95% of the power delivered when directly connected.
-        efficiency[0] = efficiency[1] = 0.95;
+        efficiency[0] = efficiency[1] = 1.0;
         efficiency[2] = efficiency[3] = 1.0;
 
 
