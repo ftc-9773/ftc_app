@@ -12,6 +12,7 @@ import org.robocracy.ftcrobot.AutonomousScorer;
 import org.robocracy.ftcrobot.DriverStation.DriverCommand;
 import org.robocracy.ftcrobot.DriverStation.DriverStation;
 import org.robocracy.ftcrobot.FTCRobot;
+import org.robocracy.ftcrobot.LinearLift;
 import org.robocracy.ftcrobot.util.CircularQueue;
 import org.robocracy.ftcrobot.util.FileRW;
 import org.robocracy.ftcrobot.util.PIDController;
@@ -44,6 +45,7 @@ public class AWDMecanumDS {
     double robotLength, robotWidth;
     FTCRobot robot;
     NavX navx_device = null;
+    LinearLift linearLift;
 
     public AWDMecanumDS(LinearOpMode myOpmode, FTCRobot robot) {
         double wheelDiameter, forwardFrictionCoeff, sidewaysFrictionCoeff;
@@ -113,6 +115,7 @@ public class AWDMecanumDS {
         }
         this.robotLength = 10.5; // in  inches
         this.robotWidth = 15; // in  inches
+        this.linearLift = new LinearLift(robot, curOpmode);
     }
 
     /**
